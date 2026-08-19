@@ -199,6 +199,12 @@ class NemotronV3Model(nn.Module):
 
 
 class NemotronHForCausalLM(HFCheckpointingMixin, GenerationMixin, nn.Module, MoEFSDPSyncMixin):
+    # Router e_score_correction_bias must stay FP32 (see Gate.__init__ in
+    # moe/layers.py): bf16 rounding can flip MoE expert selection.
+    # cast_model_to_dtype() restores matching buffers after the model-wide
+    # .to(dtype). Backport of the mechanism+declaration from 174c5d15 (#2484).
+    _keep_in_fp32_modules_strict = ["e_score_correction_bias"]
+
     """NemotronV3 model with language modeling head.
 
     Supports ``.generate()`` from ``transformers.generation.GenerationMixin`` with O(1)

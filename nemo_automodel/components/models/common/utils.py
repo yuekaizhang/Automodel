@@ -492,6 +492,14 @@ def _restore_fp32_modules(model: nn.Module, fp32_keywords: list[str]) -> None:
     for name, module in model.named_modules():
         if any(kw in name for kw in fp32_keywords):
             module.to(torch.float32)
+    for name, param in model.named_parameters():
+        if any(kw in name for kw in fp32_keywords):
+            param.data = param.data.to(torch.float32)
+    for name, buf in model.named_buffers():
+        if any(kw in name for kw in fp32_keywords):
+            module_name, _, buffer_name = name.rpartition(".")
+            module = model.get_submodule(module_name) if module_name else model
+            module._buffers[buffer_name] = buf.to(torch.float32)
 
 
 def _restore_fp32_buffers(model: nn.Module, fp32_keywords: list[str]) -> None:
@@ -508,6 +516,11 @@ def _restore_fp32_buffers(model: nn.Module, fp32_keywords: list[str]) -> None:
         if any(kw in name for kw in fp32_keywords):
             for buf_name, buf in module.named_buffers(recurse=False):
                 module._buffers[buf_name] = buf.to(torch.float32)
+    for name, buf in model.named_buffers():
+        if any(kw in name for kw in fp32_keywords):
+            module_name, _, buffer_name = name.rpartition(".")
+            module = model.get_submodule(module_name) if module_name else model
+            module._buffers[buffer_name] = buf.to(torch.float32)
 
 
 __all__ = [
